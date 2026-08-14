@@ -1,0 +1,16 @@
+# Render Blueprint — declares the backend service so it can be created with one click.
+# Render reads this file when you connect the repo as a "Blueprint".
+services:
+  - type: web
+    name: upwind-email-scorer
+    runtime: node
+    plan: free
+    rootDir: backend          # the Node app lives in /backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health  # Render pings this to know the service is up
+    envVars:
+      - key: SHARED_SECRET    # Render generates a strong random value; copy it into the add-on
+        generateValue: true
+      - key: OPENAI_API_KEY   # set manually later (M4); not synced from the repo
+        sync: false
