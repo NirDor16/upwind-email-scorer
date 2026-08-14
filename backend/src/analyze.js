@@ -4,6 +4,7 @@ import { urlSignals } from './signals/urls.js';
 import { attachmentSignals } from './signals/attachments.js';
 import { contentSignals } from './signals/content.js';
 import { scoreSignals } from './scoring.js';
+import { explainVerdict } from './explain.js';
 
 /**
  * Orchestrates the deterministic analysis pipeline.
@@ -12,13 +13,14 @@ import { scoreSignals } from './scoring.js';
  * the scorer turns them into a bounded score + verdict band. The signals are
  * sorted strongest-first so the UI and the explanation can lead with what matters.
  *
- * A natural-language explanation layer (OpenAI) is added in M4 and will replace
- * buildBasicExplanation() — but it only rephrases these signals, it never
- * changes the score.
+ * The natural-language explanation is produced by the OpenAI layer, which only
+ * rephrases these findings — it never changes the score. If that layer is
+ * unavailable (no key, error, timeout), we fall back to a deterministic summary,
+ * so analysis always returns a usable result.
  *
  * @param {object} email - Untrusted description of the opened email.
  */
-export function analyzeEmail(email) {
+export async function analyzeEmail(email) {
   const safe = normalize(email);
 
   const signals = [
@@ -31,12 +33,17 @@ export function analyzeEmail(email) {
 
   const { score, band, verdict } = scoreSignals(signals);
 
+  const aiExplanation = await explainVerdict({
+    score, band, signals, subject: safe.subject, from: safe.from
+  });
+
   return {
     score,
     band,
     verdict,
     signals,
-    explanation: buildBasicExplanation(signals)
+    explanation: aiExplanation || buildBasicExplanation(signals),
+    explanationSource: aiExplanation ? 'ai' : 'rules'
   };
 }
 

@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzeEmail } from '../src/analyze.js';
 
-test('a benign, fully-authenticated email scores Safe', () => {
-  const result = analyzeEmail({
+test('a benign, fully-authenticated email scores Safe', async () => {
+  const result = await analyzeEmail({
     subject: 'Lunch tomorrow?',
     from: 'Alice <alice@company.com>',
     rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
@@ -14,8 +14,8 @@ test('a benign, fully-authenticated email scores Safe', () => {
   assert.ok(result.score < 25, `expected low score, got ${result.score}`);
 });
 
-test('a spoofed brand + auth failure + IP link scores high', () => {
-  const result = analyzeEmail({
+test('a spoofed brand + auth failure + IP link scores high', async () => {
+  const result = await analyzeEmail({
     subject: 'Your PayPal account will be suspended - verify now',
     from: 'PayPal Support <security@paypa1-alerts.ru>',
     replyTo: 'noreply@random-inbox.top',
@@ -27,8 +27,8 @@ test('a spoofed brand + auth failure + IP link scores high', () => {
   assert.ok(['Likely Malicious', 'Malicious'].includes(result.band));
 });
 
-test('a dangerous double-extension attachment is flagged', () => {
-  const result = analyzeEmail({
+test('a dangerous double-extension attachment is flagged', async () => {
+  const result = await analyzeEmail({
     subject: 'Invoice attached',
     from: 'billing@vendor.com',
     rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
@@ -38,9 +38,9 @@ test('a dangerous double-extension attachment is flagged', () => {
   assert.ok(names.includes('double-extension'));
 });
 
-test('content signals are detected in the HTML body, not just the plain body', () => {
+test('content signals are detected in the HTML body, not just the plain body', async () => {
   // Regression: some emails keep the meaningful copy only in the HTML part.
-  const result = analyzeEmail({
+  const result = await analyzeEmail({
     subject: 'Sudo email verification [GitHub]',
     from: 'GitHub <noreply@github.com>',
     rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
@@ -51,7 +51,7 @@ test('content signals are detected in the HTML body, not just the plain body', (
   assert.ok(names.includes('credential-request'), 'expected credential-request from HTML body');
 });
 
-test('malformed / empty input does not throw', () => {
-  assert.doesNotThrow(() => analyzeEmail(null));
-  assert.doesNotThrow(() => analyzeEmail({ from: 12345, attachments: 'nope' }));
+test('malformed / empty input does not throw', async () => {
+  await assert.doesNotReject(() => analyzeEmail(null));
+  await assert.doesNotReject(() => analyzeEmail({ from: 12345, attachments: 'nope' }));
 });

@@ -39,9 +39,9 @@ function requireAuth(req, res, next) {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Core endpoint: analyze one email.
-app.post('/analyze', requireAuth, (req, res) => {
+app.post('/analyze', requireAuth, async (req, res) => {
   try {
-    const result = analyzeEmail(req.body ?? {});
+    const result = await analyzeEmail(req.body ?? {});
     return res.json(result);
   } catch (err) {
     // Never leak internals or the offending content back to the client.
