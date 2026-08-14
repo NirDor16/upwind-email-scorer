@@ -162,9 +162,11 @@ function buildResultCard_(result, messageId, showAll) {
 
   if (result.explanation) {
     section.addWidget(CardService.newTextParagraph().setText(forceLtr_(escapeText_(result.explanation))));
+    // Clarify what's AI vs. deterministic: only this paragraph above is
+    // AI-written; the individual findings listed below are rule-based, not AI.
     const sourceNote = result.explanationSource === 'ai'
-      ? 'AI-generated summary of the findings below.'
-      : 'Automatic summary (AI explanation unavailable).';
+      ? 'This summary was written by AI based on the deterministic findings listed below.'
+      : 'This summary was generated automatically (AI explanation unavailable) from the findings listed below.';
     section.addWidget(CardService.newTextParagraph().setText('<i>' + forceLtr_(escapeText_(sourceNote)) + '</i>'));
   }
 
