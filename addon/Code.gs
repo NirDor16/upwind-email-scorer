@@ -149,7 +149,7 @@ function buildResultCard_(result) {
   const shown = allSignals.slice(0, 5);
   shown.forEach(function (s) {
     section.addWidget(CardService.newKeyValue()
-      .setTopLabel(severityEmoji_(s.severity) + ' ' + forceLtr_(escapeText_(s.name)))
+      .setTopLabel(severityEmoji_(s.severity) + ' ' + forceLtr_(escapeText_(humanizeName_(s.name))))
       .setContent(forceLtr_(escapeText_(s.detail || '')))
       .setMultiline(true)); // long English findings must wrap, not truncate to one line
   });
@@ -199,6 +199,12 @@ function bandEmoji_(band) {
     case 'Malicious': return '🔴';
     default: return '⚪';
   }
+}
+
+// Turns an internal signal id like "credential-request" into "Credential request".
+function humanizeName_(name) {
+  const s = String(name || '').replace(/-/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function severityEmoji_(severity) {
