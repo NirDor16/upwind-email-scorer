@@ -37,12 +37,17 @@ function onGmailMessageOpen(e) {
   const section = CardService.newCardSection();
 
   // Email fields are UNTRUSTED — escape before rendering (see escapeText_).
+  // Wrapped in forceLtr_ because these are almost always Latin-script (English
+  // subjects/addresses); without it, RTL Gmail mirrors "<" / ">" around the
+  // sender's email address into the wrong shape.
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Subject')
-    .setContent(escapeText_(message.getSubject() || '(no subject)')));
+    .setContent(forceLtr_(escapeText_(message.getSubject() || '(no subject)')))
+    .setMultiline(true));
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('From')
-    .setContent(escapeText_(message.getFrom() || '(unknown)')));
+    .setContent(forceLtr_(escapeText_(message.getFrom() || '(unknown)')))
+    .setMultiline(true));
 
   section.addWidget(CardService.newTextButton()
     .setText('Analyze this email')
