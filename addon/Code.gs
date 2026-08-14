@@ -110,13 +110,35 @@ function runAnalysis(e) {
     return notify_('Could not reach the analysis service.');
   }
 
-  return buildResultCard_(result);
+  const messageId = e.parameters.messageId;
+  try {
+    // Cache the full result briefly so "Show all findings" can re-render
+    // without a second backend call. Caching is a nice-to-have — if it fails
+    // (e.g. quota), the button below just degrades to an "expired" notice.
+    CacheService.getUserCache().put('analysis_' + messageId, JSON.stringify(result), 1800);
+  } catch (err) {
+    // ignore — non-critical
+  }
+
+  return buildResultCard_(result, messageId, false);
+}
+
+// ---------------------------------------------------------------------------
+// Action: called when the user clicks "Show all findings".
+// ---------------------------------------------------------------------------
+function showAllFindings(e) {
+  const messageId = e.parameters.messageId;
+  const cached = CacheService.getUserCache().get('analysis_' + messageId);
+  if (!cached) {
+    return notify_('Results expired — click Analyze again to refresh.');
+  }
+  return buildResultCard_(JSON.parse(cached), messageId, true);
 }
 
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
-function buildResultCard_(result) {
+function buildResultCard_(result, messageId, showAll) {
   const band = result.band || '';
   const score = Number(result.score) || 0;
 
@@ -146,21 +168,28 @@ function buildResultCard_(result) {
     section.addWidget(CardService.newTextParagraph().setText('<i>' + forceLtr_(escapeText_(sourceNote)) + '</i>'));
   }
 
-  // Show the strongest findings only (already sorted by the backend); a long
-  // list is harder to act on than a short, prioritized one.
+  // Show the strongest findings only by default (already sorted by the
+  // backend); a long list is harder to act on than a short, prioritized one.
+  // "Show all findings" lets the user expand to the full list on demand.
   // These are all our own English text (fixed strings + ASCII-ish values like
   // domains/filenames), so it's safe — and necessary — to force LTR on them too.
   const allSignals = result.signals || [];
-  const shown = allSignals.slice(0, 5);
+  const shown = showAll ? allSignals : allSignals.slice(0, 5);
   shown.forEach(function (s) {
     section.addWidget(CardService.newKeyValue()
       .setTopLabel(severityEmoji_(s.severity) + ' ' + forceLtr_(escapeText_(humanizeName_(s.name))))
       .setContent(forceLtr_(escapeText_(s.detail || '')))
       .setMultiline(true)); // long English findings must wrap, not truncate to one line
   });
-  if (allSignals.length > shown.length) {
+  if (!showAll && allSignals.length > shown.length) {
+    section.addWidget(CardService.newTextButton()
+      .setText('Show all findings (+' + (allSignals.length - shown.length) + ')')
+      .setOnClickAction(CardService.newAction()
+        .setFunctionName('showAllFindings')
+        .setParameters({ messageId: messageId })));
+  } else if (showAll && allSignals.length > 0) {
     section.addWidget(CardService.newTextParagraph()
-      .setText(forceLtr_('+' + (allSignals.length - shown.length) + ' more finding(s) not shown.')));
+      .setText(forceLtr_('Showing all ' + allSignals.length + ' finding(s).')));
   }
 
   section.addWidget(CardService.newTextParagraph()
