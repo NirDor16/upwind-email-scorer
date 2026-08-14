@@ -89,6 +89,33 @@ export function isFreemail(domain) {
   return FREEMAIL_DOMAINS.has(domain);
 }
 
+// A handful of common two-part TLDs (co.il, co.uk, ...). Not a full public
+// suffix list — good enough for this project's purpose (see baseDomain below).
+const TWO_PART_TLDS = new Set([
+  'co.il', 'org.il', 'net.il', 'co.uk', 'org.uk', 'ac.uk',
+  'co.jp', 'co.nz', 'com.au', 'com.br', 'co.in', 'co.za'
+]);
+
+/**
+ * Best-effort "organization" domain: collapses a subdomain down to its
+ * registrable domain, e.g. "update.strava.com" -> "strava.com". This matters
+ * because many legitimate senders (marketing/ESP platforms especially) send
+ * from one subdomain and route replies/links through another — that's normal
+ * practice, not spoofing, and should not be scored as suspicious.
+ *
+ * This is a heuristic, not a full Public Suffix List implementation (e.g. the
+ * `psl` npm package) — good enough for common cases, documented as a known
+ * simplification.
+ */
+export function baseDomain(domain) {
+  if (!domain) return '';
+  const parts = domain.split('.');
+  if (parts.length <= 2) return domain;
+  const lastTwo = parts.slice(-2).join('.');
+  if (TWO_PART_TLDS.has(lastTwo)) return parts.slice(-3).join('.');
+  return lastTwo;
+}
+
 /** True for URLs whose host is a raw IP address (e.g. http://192.0.2.1/...). */
 export function isIpLiteralHost(host) {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[');

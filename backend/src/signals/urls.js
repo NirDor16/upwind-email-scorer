@@ -1,4 +1,4 @@
-import { extractLinks, hostOf, isIpLiteralHost, isPunycodeHost } from '../utils/parse.js';
+import { extractLinks, hostOf, isIpLiteralHost, isPunycodeHost, baseDomain } from '../utils/parse.js';
 
 // Well-known link shorteners. Legitimate, but they hide the true destination,
 // which is why phishing likes them.
@@ -25,9 +25,12 @@ export function urlSignals(email) {
     const host = hostOf(link.href);
     if (!host) continue;
 
-    // Anchor text advertises one domain, but href points somewhere else.
+    // Anchor text advertises one domain, but href points to a DIFFERENT
+    // ORGANIZATION (compared at the base-domain level — a link labeled
+    // "update.strava.com" pointing at "strava.com", or vice versa, is normal
+    // and not flagged; only a genuinely different organization is).
     const textHost = hostOf(link.text.startsWith('http') ? link.text : 'http://' + link.text);
-    if (textHost && host !== textHost && link.text.includes('.')) mismatch++;
+    if (textHost && link.text.includes('.') && baseDomain(host) !== baseDomain(textHost)) mismatch++;
 
     if (isIpLiteralHost(host)) ip++;
     if (SHORTENERS.has(host)) shortener++;

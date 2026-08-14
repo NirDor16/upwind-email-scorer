@@ -1,4 +1,4 @@
-import { parseAddress, isPunycodeHost, brandImpersonated } from '../utils/parse.js';
+import { parseAddress, isPunycodeHost, brandImpersonated, baseDomain } from '../utils/parse.js';
 
 /**
  * Sender-identity signals: does the "From" line look like who it claims to be?
@@ -19,12 +19,15 @@ export function senderSignals(email) {
     });
   }
 
-  // Replies would silently go to a different domain than the sender.
-  if (replyTo.domain && from.domain && replyTo.domain !== from.domain) {
+  // Replies would silently go to a DIFFERENT ORGANIZATION than the sender.
+  // Compared at the organization level (baseDomain), not the exact hostname,
+  // because "update.strava.com" replying via "strava.com" is normal ESP
+  // practice, not spoofing — only a genuinely different organization is a signal.
+  if (replyTo.domain && from.domain && baseDomain(replyTo.domain) !== baseDomain(from.domain)) {
     signals.push({
       name: 'replyto-mismatch',
       severity: 'medium',
-      detail: `Replies would go to ${replyTo.domain}, not the sender's domain ${from.domain}.`,
+      detail: `Replies would go to ${replyTo.domain}, a different organization than the sender's domain ${from.domain}.`,
       points: 10
     });
   }

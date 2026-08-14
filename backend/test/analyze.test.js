@@ -51,6 +51,35 @@ test('content signals are detected in the HTML body, not just the plain body', a
   assert.ok(names.includes('credential-request'), 'expected credential-request from HTML body');
 });
 
+test('same-organization subdomains (ESP pattern) are not flagged as mismatches', async () => {
+  // Regression: legitimate senders commonly send from a subdomain and reply/
+  // link through the parent domain (or another subdomain) of the SAME org.
+  const result = await analyzeEmail({
+    subject: 'What a week!',
+    from: 'Strava <mail@update.strava.com>',
+    replyTo: 'noreply@strava.com',
+    rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
+    bodyPlain: 'Check your weekly stats.',
+    bodyHtml: '<a href="https://links.strava.com/track?u=abc">www.strava.com</a>'
+  });
+  const names = result.signals.map((s) => s.name);
+  assert.ok(!names.includes('replyto-mismatch'), 'same-org reply-to should not be flagged');
+  // Note: links.strava.com and www.strava.com share the base domain strava.com,
+  // so this should not be flagged as a mismatch either.
+  assert.ok(!names.includes('link-text-mismatch'), 'same-org link should not be flagged');
+});
+
+test('reply-to pointing at a genuinely different organization is still flagged', async () => {
+  const result = await analyzeEmail({
+    subject: 'Invoice',
+    from: 'Billing <billing@vendor.com>',
+    replyTo: 'reply@totally-different-company.com',
+    rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass'
+  });
+  const names = result.signals.map((s) => s.name);
+  assert.ok(names.includes('replyto-mismatch'));
+});
+
 test('malformed / empty input does not throw', async () => {
   await assert.doesNotReject(() => analyzeEmail(null));
   await assert.doesNotReject(() => analyzeEmail({ from: 12345, attachments: 'nope' }));
