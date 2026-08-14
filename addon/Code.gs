@@ -150,7 +150,8 @@ function buildResultCard_(result) {
   shown.forEach(function (s) {
     section.addWidget(CardService.newKeyValue()
       .setTopLabel(severityEmoji_(s.severity) + ' ' + forceLtr_(escapeText_(s.name)))
-      .setContent(forceLtr_(escapeText_(s.detail || ''))));
+      .setContent(forceLtr_(escapeText_(s.detail || '')))
+      .setMultiline(true)); // long English findings must wrap, not truncate to one line
   });
   if (allSignals.length > shown.length) {
     section.addWidget(CardService.newTextParagraph()
