@@ -131,32 +131,34 @@ function buildResultCard_(result) {
 
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Verdict')
-    .setContent(bandEmoji_(band) + ' ' + escapeText_(band)));
+    .setContent(bandEmoji_(band) + ' ' + forceLtr_(escapeText_(band))));
 
   if (result.explanation) {
-    section.addWidget(CardService.newTextParagraph().setText(escapeText_(result.explanation)));
+    section.addWidget(CardService.newTextParagraph().setText(forceLtr_(escapeText_(result.explanation))));
     const sourceNote = result.explanationSource === 'ai'
       ? 'AI-generated summary of the findings below.'
       : 'Automatic summary (AI explanation unavailable).';
-    section.addWidget(CardService.newTextParagraph().setText('<i>' + escapeText_(sourceNote) + '</i>'));
+    section.addWidget(CardService.newTextParagraph().setText('<i>' + forceLtr_(escapeText_(sourceNote)) + '</i>'));
   }
 
   // Show the strongest findings only (already sorted by the backend); a long
   // list is harder to act on than a short, prioritized one.
+  // These are all our own English text (fixed strings + ASCII-ish values like
+  // domains/filenames), so it's safe — and necessary — to force LTR on them too.
   const allSignals = result.signals || [];
   const shown = allSignals.slice(0, 5);
   shown.forEach(function (s) {
     section.addWidget(CardService.newKeyValue()
-      .setTopLabel(severityEmoji_(s.severity) + ' ' + escapeText_(s.name))
-      .setContent(escapeText_(s.detail || '')));
+      .setTopLabel(severityEmoji_(s.severity) + ' ' + forceLtr_(escapeText_(s.name)))
+      .setContent(forceLtr_(escapeText_(s.detail || ''))));
   });
   if (allSignals.length > shown.length) {
     section.addWidget(CardService.newTextParagraph()
-      .setText('+' + (allSignals.length - shown.length) + ' more finding(s) not shown.'));
+      .setText(forceLtr_('+' + (allSignals.length - shown.length) + ' more finding(s) not shown.')));
   }
 
   section.addWidget(CardService.newTextParagraph()
-    .setText('<i>Advisory only — always use your own judgment.</i>'));
+    .setText('<i>' + forceLtr_('Advisory only — always use your own judgment.') + '</i>'));
 
   card.addSection(section);
 
