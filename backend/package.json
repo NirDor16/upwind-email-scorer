@@ -1,0 +1,17 @@
+{
+  "name": "upwind-email-scorer-backend",
+  "version": "0.1.0",
+  "description": "Backend analysis service for the Malicious Email Scorer Gmail Add-on",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
