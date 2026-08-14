@@ -127,7 +127,7 @@ function buildResultCard_(result) {
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Score')
     .setContent(forceLtr_(score + ' / 100')));
-  section.addWidget(CardService.newTextParagraph().setText(scoreBar_(score, band)));
+  section.addWidget(CardService.newTextParagraph().setText(forceLtr_(scoreBar_(score, band))));
 
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Verdict')
@@ -180,8 +180,12 @@ function escapeText_(text) {
 
 // Forces a substring to render left-to-right regardless of the surrounding
 // interface language (fixes "12 / 100" showing as "100 / 12" in Hebrew Gmail).
+// Built from character codes at runtime (not pasted as literal invisible
+// characters) so copy-pasting this file never corrupts them.
 function forceLtr_(text) {
-  return '‪' + text + '‬'; // LEFT-TO-RIGHT EMBEDDING ... POP DIRECTIONAL FORMATTING
+  const LRE = String.fromCharCode(8234); // LEFT-TO-RIGHT EMBEDDING
+  const PDF = String.fromCharCode(8236); // POP DIRECTIONAL FORMATTING
+  return LRE + text + PDF;
 }
 
 function bandEmoji_(band) {
