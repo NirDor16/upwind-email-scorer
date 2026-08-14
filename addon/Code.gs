@@ -66,11 +66,24 @@ function runAnalysis(e) {
   GmailApp.setCurrentMessageAccessToken(e.gmail.accessToken);
   const message = GmailApp.getMessageById(e.parameters.messageId);
 
-  // M1: send a minimal payload. M3 will enrich this with headers, body, URLs,
-  // and attachment metadata.
+  // The header block is everything before the first blank line of the raw MIME.
+  // We send headers only (not the whole raw message) to keep the payload small.
+  const rawContent = message.getRawContent() || '';
+  const rawHeaders = rawContent.split(/\r?\n\r?\n/)[0] || '';
+
+  // Attachment metadata only — never the file bytes.
+  const attachments = message.getAttachments({ includeInlineImages: false }).map(function (a) {
+    return { name: a.getName(), contentType: a.getContentType(), size: a.getSize() };
+  });
+
   const payload = {
     subject: message.getSubject() || '',
-    from: message.getFrom() || ''
+    from: message.getFrom() || '',
+    replyTo: message.getReplyTo() || '',
+    rawHeaders: rawHeaders.slice(0, 20000),
+    bodyPlain: (message.getPlainBody() || '').slice(0, 20000),
+    bodyHtml: (message.getBody() || '').slice(0, 50000),
+    attachments: attachments
   };
 
   let result;
