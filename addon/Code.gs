@@ -112,27 +112,48 @@ function runAnalysis(e) {
 // Rendering
 // ---------------------------------------------------------------------------
 function buildResultCard_(result) {
+  const band = result.band || '';
+  const score = Number(result.score) || 0;
+
   const card = CardService.newCardBuilder()
-    .setHeader(CardService.newCardHeader().setTitle('Analysis Result'));
+    .setHeader(CardService.newCardHeader()
+      .setTitle(bandEmoji_(band) + ' Analysis Result')
+      .setSubtitle(band));
 
   const section = CardService.newCardSection();
+
+  // Score — wrapped in LTR embedding marks so "12 / 100" doesn't get visually
+  // reordered inside a right-to-left (Hebrew/Arabic) Gmail interface.
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Score')
-    .setContent(String(result.score) + ' / 100'));
+    .setContent(forceLtr_(score + ' / 100')));
+  section.addWidget(CardService.newTextParagraph().setText(scoreBar_(score, band)));
+
   section.addWidget(CardService.newKeyValue()
     .setTopLabel('Verdict')
-    .setContent(escapeText_(result.band || '')));
+    .setContent(bandEmoji_(band) + ' ' + escapeText_(band)));
 
   if (result.explanation) {
-    section.addWidget(CardService.newTextParagraph()
-      .setText(escapeText_(result.explanation)));
+    section.addWidget(CardService.newTextParagraph().setText(escapeText_(result.explanation)));
+    const sourceNote = result.explanationSource === 'ai'
+      ? 'AI-generated summary of the findings below.'
+      : 'Automatic summary (AI explanation unavailable).';
+    section.addWidget(CardService.newTextParagraph().setText('<i>' + escapeText_(sourceNote) + '</i>'));
   }
 
-  (result.signals || []).forEach(function (s) {
+  // Show the strongest findings only (already sorted by the backend); a long
+  // list is harder to act on than a short, prioritized one.
+  const allSignals = result.signals || [];
+  const shown = allSignals.slice(0, 5);
+  shown.forEach(function (s) {
     section.addWidget(CardService.newKeyValue()
-      .setTopLabel(escapeText_(s.name))
+      .setTopLabel(severityEmoji_(s.severity) + ' ' + escapeText_(s.name))
       .setContent(escapeText_(s.detail || '')));
   });
+  if (allSignals.length > shown.length) {
+    section.addWidget(CardService.newTextParagraph()
+      .setText('+' + (allSignals.length - shown.length) + ' more finding(s) not shown.'));
+  }
 
   section.addWidget(CardService.newTextParagraph()
     .setText('<i>Advisory only — always use your own judgment.</i>'));
@@ -157,8 +178,42 @@ function escapeText_(text) {
     .replace(/>/g, '&gt;');
 }
 
+// Forces a substring to render left-to-right regardless of the surrounding
+// interface language (fixes "12 / 100" showing as "100 / 12" in Hebrew Gmail).
+function forceLtr_(text) {
+  return '‪' + text + '‬'; // LEFT-TO-RIGHT EMBEDDING ... POP DIRECTIONAL FORMATTING
+}
+
+function bandEmoji_(band) {
+  switch (band) {
+    case 'Safe': return '🟢';
+    case 'Suspicious': return '🟡';
+    case 'Likely Malicious': return '🟠';
+    case 'Malicious': return '🔴';
+    default: return '⚪';
+  }
+}
+
+function severityEmoji_(severity) {
+  switch (severity) {
+    case 'high': return '🔴';
+    case 'medium': return '🟠';
+    case 'low': return '🟡';
+    default: return 'ℹ️';
+  }
+}
+
+// A simple 10-segment text "gauge" colored by band, e.g. 🟩🟩🟩⬜⬜⬜⬜⬜⬜⬜ for score 30.
+function scoreBar_(score, band) {
+  const fillChar = { Safe: '🟩', Suspicious: '🟨', 'Likely Malicious': '🟧', Malicious: '🟥' }[band] || '⬛';
+  const filled = Math.max(0, Math.min(10, Math.round(score / 10)));
+  let bar = '';
+  for (let i = 0; i < 10; i++) bar += (i < filled ? fillChar : '⬜');
+  return bar;
+}
+
 function notify_(text) {
   return CardService.newActionResponseBuilder()
-    .setNotification(CardService.newNotification().setText(text))
+    .setNotification(CardService.newNotification().setText('⚠️ ' + text))
     .build();
 }
