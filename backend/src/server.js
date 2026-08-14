@@ -41,17 +41,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // Core endpoint: analyze one email.
 app.post('/analyze', requireAuth, (req, res) => {
   try {
-    const body = req.body ?? {};
-    const result = analyzeEmail(body);
-
-    // TEMP DEBUG — shows what the add-on actually delivered. Remove after diagnosis.
-    result.signals.unshift({
-      name: 'debug-received',
-      severity: 'info',
-      detail: `rawHeaders=${(body.rawHeaders || '').length} bodyPlain=${(body.bodyPlain || '').length} bodyHtml=${(body.bodyHtml || '').length} attachments=${Array.isArray(body.attachments) ? body.attachments.length : 0}`,
-      points: 0
-    });
-
+    const result = analyzeEmail(req.body ?? {});
     return res.json(result);
   } catch (err) {
     // Never leak internals or the offending content back to the client.

@@ -38,6 +38,19 @@ test('a dangerous double-extension attachment is flagged', () => {
   assert.ok(names.includes('double-extension'));
 });
 
+test('content signals are detected in the HTML body, not just the plain body', () => {
+  // Regression: some emails keep the meaningful copy only in the HTML part.
+  const result = analyzeEmail({
+    subject: 'Sudo email verification [GitHub]',
+    from: 'GitHub <noreply@github.com>',
+    rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
+    bodyPlain: 'Here is your code: 123456. Valid for 15 minutes.',
+    bodyHtml: '<h1>Please verify your identity, NirDor16</h1><p>Here is your code.</p>'
+  });
+  const names = result.signals.map((s) => s.name);
+  assert.ok(names.includes('credential-request'), 'expected credential-request from HTML body');
+});
+
 test('malformed / empty input does not throw', () => {
   assert.doesNotThrow(() => analyzeEmail(null));
   assert.doesNotThrow(() => analyzeEmail({ from: 12345, attachments: 'nope' }));

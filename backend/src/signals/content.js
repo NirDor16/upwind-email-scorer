@@ -1,3 +1,5 @@
+import { htmlToText } from '../utils/parse.js';
+
 /**
  * Content / social-engineering signals from the email text. Individually these
  * are weak, but they matter in combination (e.g. urgency + a credential link).
@@ -35,7 +37,13 @@ const PATTERNS = [
 
 export function contentSignals(email) {
   const signals = [];
-  const text = [email.subject || '', email.bodyPlain || ''].join('\n');
+  // Look at subject + plain body + text extracted from the HTML body, since the
+  // meaningful copy often lives only in the HTML part.
+  const text = [
+    email.subject || '',
+    email.bodyPlain || '',
+    htmlToText(email.bodyHtml)
+  ].join('\n');
   for (const p of PATTERNS) {
     if (p.re.test(text)) {
       signals.push({ name: p.name, severity: p.severity, detail: p.detail, points: p.points });

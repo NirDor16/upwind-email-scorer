@@ -56,6 +56,26 @@ export function extractLinks(html) {
   return links;
 }
 
+/**
+ * Convert an HTML body to readable text. Many emails keep their meaningful copy
+ * only in the HTML part (the text/plain part can be short or missing), so content
+ * analysis must look here too. We strip tags — we never render or execute the HTML.
+ */
+export function htmlToText(html) {
+  if (typeof html !== 'string') return '';
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ') // drop scripts/styles entirely
+    .replace(/<[^>]+>/g, ' ')                         // strip remaining tags
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /** Hostname of a URL, lowercased. Returns '' if it can't be parsed. */
 export function hostOf(url) {
   try {
