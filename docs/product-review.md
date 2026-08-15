@@ -36,11 +36,11 @@ whose own role would never grant them that visibility directly, can see it. For 
 that's an awkward permissions bug. For a company whose entire product is security posture data,
 it's exactly the kind of thing a customer's own security review would catch.
 
-Closing it needs one explicit product decision (content is almost certainly fixed at the
-creator's access, generated once; that should just be stated) plus two follow-ups: warning copy
-in the UI when a report is set to org-wide visibility or a broad recipient list, and a decision
-on whether creating that kind of report should require its own permission rather than riding on
-general report-creation access.
+Closing it needs one explicit product decision, plus two follow-ups: warning copy in the UI when
+a report is set to org-wide visibility or a broad recipient list, and a decision on whether
+creating that kind of report should require its own permission rather than riding on general
+report-creation access. One likely model for the core decision is that content is generated
+according to the creator's access, but that needs to be stated explicitly rather than assumed.
 
 ### 2. Nothing stops a recipient from being outside the company
 
@@ -177,7 +177,7 @@ scratch later.
 | TC-21 | Create a Daily/Weekly/Monthly/Quarterly workflow that generates and emails a saved report | Report is generated and emailed at the configured time | Critical |
 | TC-22 | Scheduled report under the destination's size limit | Delivered as a direct email attachment | High |
 | TC-23 | Scheduled report over the destination's size limit | A download link is sent instead; requires authentication before it works | Critical |
-| TC-24 | Configure a workflow recipient with an external, non-platform email address *(pending gap #2)* | Blocked by default, or allowed only behind an elevated permission with a distinct audit entry | Critical (security) |
+| TC-24 | Configure a workflow recipient with an external, non-platform email address *(pending gap #2)* | Behavior matches the final policy decided for Gap #2; once defined, verify the restriction, any permission requirement, and the audit entry exactly | Critical (security) |
 | TC-25 | Simulate a scheduled generation failure, e.g. a broken data source *(pending gap #5)* | Not a testable pass/fail yet: depends entirely on the retry/notification policy decided for gap #5. Once defined (e.g. "retry twice, then mark the run Failed and notify the owner"), verify each of those steps exactly | Critical |
 | TC-26 | Disable a workflow | No further scheduled emails go out; Reports page reflects the disabled state | Medium |
 
@@ -186,7 +186,7 @@ scratch later.
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
 | TC-27 | A user without report-creation permission tries to create one, via UI and API | Blocked both ways, with a clear permission error | Critical (security) |
-| TC-28 | A user without access to a specific module creates/generates a report for it *(pending gap #1)* | Blocked, or scoped to only what they're permitted to see | Critical |
+| TC-28 | A user without access to a specific module creates/generates a report for it *(pending gap #1)* | Behavior matches the final policy decided for Gap #1; once defined, verify the exact block/scope behavior | Critical |
 | TC-29 | Create, edit, delete a report object | Each action produces a correctly-attributed audit entry (actor, timestamp, action, report ID) | High |
 | TC-30 | Confirm whether generation/delivery events are captured in the audit log | Not specified in the PRD (only create/update/delete are listed); treat as an open gap until confirmed one way or the other, not a pass/fail check | Medium (documentation) |
 
@@ -257,8 +257,8 @@ expectations, and whatever SLOs get formally agreed.
 ### Data that doesn't exist yet and probably should
 
 - **A generation event log.** One entry per attempt: report ID, trigger type, start/end time,
-  success or failure and why, whether it was truncated, output size or row count. The audit log
-  today only covers create/update/delete on the report object, not generation itself.
+  success or failure and why, whether it was truncated, output size or row count. The PRD only
+  specifies audit logging for create/update/delete; generation-level logging is not defined.
 - **Delivery events.** Per scheduled send: recipients, delivery method (attachment vs. link),
   size, outcome, and, for link-based delivery, the actual download events after the fact. This
   feeds the reliability metrics above and is also the record that closes gaps #2 and #3:
