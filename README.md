@@ -237,8 +237,7 @@ hadn't caught:
 |---|---|
 | Real GitHub verification email | Safe (0) |
 | Real Strava weekly digest | Safe (0), after the false-positive fix above |
-| Real recruiting email (Checkout.com via Ashby) | Safe (0) |
-| Real EY password-reset email | Safe (12) — flags a weak credential-link signal without over-reacting |
+| Self-sent: password-reset-style email with a credential-related link | Safe (12) — flags a weak credential-link signal without over-reacting |
 | Self-sent: `.zip` attachment | Safe (18) — `Archive attachment` |
 | Self-sent: "You've won a $500 gift card!" | Safe (20) — `Financial lure` |
 | Self-sent: IP-literal link + mismatched anchor text + urgency + threat + credential request | **Malicious (76)** |
