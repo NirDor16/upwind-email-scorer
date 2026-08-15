@@ -191,6 +191,12 @@ Concretely:
   email in the mailbox.
 - **Add-on ↔ backend auth.** Every `/analyze` request must carry the shared
   secret as a Bearer token, so the endpoint isn't open to the public internet.
+  The check **fails closed**: if `SHARED_SECRET` is ever unset (misconfiguration),
+  every request is rejected rather than silently let through.
+- **Rate limiting.** `/analyze` is capped at 30 requests per 5 minutes per IP
+  (`express-rate-limit`), applied before auth so it also limits secret-guessing
+  attempts, not just valid ones — caps the blast radius of a leaked secret or a
+  runaway client, both in OpenAI cost and load on the free Render instance.
 - **Data minimization.** Nothing is persisted server-side beyond the request's
   lifetime (aside from a short-lived, per-message result cache used only for
   the "Show all findings" button — see below). No email content is logged.

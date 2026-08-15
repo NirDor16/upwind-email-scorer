@@ -12,12 +12,24 @@
  */
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { analyzeEmail } from './analyze.js';
 
 const app = express();
 
 // Parse JSON bodies, with a hard size cap so a huge payload can't exhaust memory.
 app.use(express.json({ limit: '1mb' }));
+
+// Caps requests per IP so a leaked/guessed secret (or a bug in the add-on)
+// can't run up the OpenAI bill or overwhelm the free Render instance. Applied
+// before auth so it also limits secret-guessing attempts, not just valid ones.
+const analyzeLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // generous for interactive/demo use, tight enough to block abuse
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'rate_limited', message: 'Too many analysis requests — please wait a few minutes.' }
+});
 
 // The add-on must send this secret in the Authorization header. It lives only in
 // environment variables (Render dashboard / local .env), never in the repo.
@@ -45,7 +57,7 @@ function requireAuth(req, res, next) {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Core endpoint: analyze one email.
-app.post('/analyze', requireAuth, async (req, res) => {
+app.post('/analyze', analyzeLimiter, requireAuth, async (req, res) => {
   try {
     const result = await analyzeEmail(req.body ?? {});
     return res.json(result);
