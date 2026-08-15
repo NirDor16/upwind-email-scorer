@@ -80,6 +80,25 @@ test('reply-to pointing at a genuinely different organization is still flagged',
   assert.ok(names.includes('replyto-mismatch'));
 });
 
+test('ordinary prose ending in a period ("click here.") is not a link mismatch', async () => {
+  // Regression: a real ATS/recruiting email with a "here." link and a
+  // "Checkout.com" -> tracking-domain link. Only the genuine domain-looking
+  // text should be flagged; "here." is prose, not a displayed URL.
+  const result = await analyzeEmail({
+    subject: 'Action required: consent',
+    from: 'Hiring Team <no-reply@ashbyhq.com>',
+    rawHeaders: 'Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass',
+    bodyHtml:
+      '<p>Please review and accept our consent terms by clicking the link <a href="https://you.ashbyhq.com/consent">here.</a></p>' +
+      '<p>At <a href="https://you.ashbyhq.com/redirect">Checkout.com</a>, we operate fast.</p>'
+  });
+  const mismatchSignal = result.signals.find((s) => s.name === 'link-text-mismatch');
+  assert.ok(mismatchSignal, 'expected a mismatch finding for the Checkout.com link');
+  assert.ok(mismatchSignal.detail.startsWith('1 link(s)'), 'only Checkout.com should count, not "here."');
+  assert.ok(mismatchSignal.detail.includes('"Checkout.com"'), 'the real mismatch should name Checkout.com');
+  assert.ok(!mismatchSignal.detail.includes('"here.'), '"here." must not be counted as a mismatch');
+});
+
 test('malformed / empty input does not throw', async () => {
   await assert.doesNotReject(() => analyzeEmail(null));
   await assert.doesNotReject(() => analyzeEmail({ from: 12345, attachments: 'nope' }));

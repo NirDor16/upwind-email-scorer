@@ -76,6 +76,18 @@ export function htmlToText(html) {
     .trim();
 }
 
+/**
+ * True if anchor text plausibly *displays* a bare URL/domain (e.g.
+ * "www.strava.com", "https://paypal.com/login") — as opposed to ordinary
+ * prose that merely happens to contain a period, like "click here." (that
+ * trailing sentence period is not a domain separator).
+ */
+export function looksLikeDomain(text) {
+  const t = String(text || '').trim().replace(/[.,;:!?]+$/, '');
+  if (!t || /\s/.test(t)) return false;
+  return /^(https?:\/\/)?(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(t);
+}
+
 /** Hostname of a URL, lowercased. Returns '' if it can't be parsed. */
 export function hostOf(url) {
   try {
