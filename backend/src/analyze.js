@@ -20,6 +20,15 @@ import { explainVerdict } from './explain.js';
  *
  * @param {object} email - Untrusted description of the opened email.
  */
+// Severity is the human-facing category (shown as a color dot in the UI);
+// points are the internal scoring weight. The two aren't on the same scale, so
+// sorting by points alone could put a "medium" finding below a "low" one just
+// because it happened to score fewer points that time. Sorting by severity
+// first (with points only as a same-severity tiebreaker) keeps the visible
+// color order always red -> orange -> yellow, which is what a user scanning
+// the list actually expects.
+const SEVERITY_RANK = { high: 3, medium: 2, low: 1, info: 0 };
+
 export async function analyzeEmail(email) {
   const safe = normalize(email);
 
@@ -29,7 +38,10 @@ export async function analyzeEmail(email) {
     ...urlSignals(safe),
     ...attachmentSignals(safe),
     ...contentSignals(safe)
-  ].sort((a, b) => (b.points || 0) - (a.points || 0));
+  ].sort((a, b) => {
+    const bySeverity = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+    return bySeverity !== 0 ? bySeverity : (b.points || 0) - (a.points || 0);
+  });
 
   const { score, band, verdict } = scoreSignals(signals);
 
