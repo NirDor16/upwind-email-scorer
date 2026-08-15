@@ -235,7 +235,7 @@ hadn't caught:
    text from the HTML body too, not just the plain-text part.
 2. **False positives from legitimate infrastructure.** A real Strava email was
    flagged because it sends from `update.strava.com` but replies via
-   `strava.com` — normal ESP practice, not spoofing. Fixed by comparing
+   `strava.com`  Fixed by comparing
    domains at the organization level, not exact hostname. A related bug —
    anchor text ending in a sentence period (`"click here."`) being mistaken
    for a displayed URL — was found the same way and fixed with a stricter
