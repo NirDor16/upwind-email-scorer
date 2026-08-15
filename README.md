@@ -45,28 +45,24 @@ crafted emails — see [Demo scenarios](#demo-scenarios-used-to-validate-this).
 
 ## Architecture
 
-```
-┌────────────────────┐      HTTPS + Bearer token       ┌──────────────────────────┐
-│  Gmail Add-on       │ ───────────────────────────────▶│  Backend (Node/Express)  │
-│  (Apps Script /     │   { subject, from, replyTo,     │  on Render               │
-│   CardService)       │     rawHeaders, bodyPlain,       │                          │
-│                      │     bodyHtml, attachments[] }    │  ┌────────────────────┐  │
-│  - reads opened      │                                  │  │ signal modules      │  │
-│    message           │ ◀─────────────────────────────── │  │ (auth/sender/urls/  │  │
-│  - renders result    │   { score, band, verdict,        │  │  attachments/       │  │
-│    card              │     signals[], explanation }     │  │  content)           │  │
-└────────────────────┘                                    │  └─────────┬──────────┘  │
-                                                            │            ▼             │
-                                                            │  ┌────────────────────┐  │
-                                                            │  │ scoring (weighted,  │  │
-                                                            │  │ capped, explainable)│  │
-                                                            │  └─────────┬──────────┘  │
-                                                            │            ▼             │
-                                                            │  ┌────────────────────┐  │
-                                                            │  │ OpenAI explanation  │  │
-                                                            │  │ layer (explain only)│  │
-                                                            │  └────────────────────┘  │
-                                                            └──────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Addon["Gmail Add-on (Apps Script / CardService)"]
+        direction TB
+        A1["Reads opened message"]
+        A2["Renders result card"]
+    end
+
+    subgraph Backend["Backend (Node/Express) on Render"]
+        direction TB
+        B1["Signal modules<br/>auth · sender · urls · attachments · content"]
+        B2["Scoring<br/>weighted, capped, explainable"]
+        B3["OpenAI explanation layer<br/>(explains only — never changes the score)"]
+        B1 --> B2 --> B3
+    end
+
+    A1 -->|"HTTPS + Bearer token<br/>subject, from, replyTo, headers, body, attachments"| B1
+    B3 -->|"score, band, verdict, signals, explanation"| A2
 ```
 
 **The add-on is intentionally thin.** It extracts a bounded set of fields from
