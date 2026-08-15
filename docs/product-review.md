@@ -1,6 +1,6 @@
-# Product Review: Custom Reporting
+﻿# Product Review: Custom Reporting
 
-**Reviewed document:** Custom Reporting — Product Requirements Document (as provided).
+**Reviewed document:** Custom Reporting, Product Requirements Document (as provided).
 
 This is a review of the spec the way I'd review it after development wraps, before signing off
 on shipping it. Three parts: a prioritized look at what's missing or unclear in the spec (A), a
@@ -10,7 +10,7 @@ way an open question from Part A gets decided.
 
 ---
 
-## Part A — Product Review
+## Part A: Product Review
 
 The spec reads well at the product-narrative level. The problem statement lands, and the two
 report types map cleanly onto two real people: the exec who wants a PDF, the practitioner who
@@ -99,17 +99,27 @@ alerting section in Part C.
   report depends on, between one generation and the next?
 - **Naming.** The spec text says "Summary Report," the Figma files say "Executive Report (PDF)."
   Small, but worth resolving before it lands in customer-facing copy.
-- **Audit log scope.** It tracks create/update/delete on the report object, but not who actually
-  received a generated report, or when. That's exactly the record you'd want if gap #1 or #2
-  ever became a real incident.
+- **Audit log scope.** The spec's audit-logging bullet only lists create/update/delete on the
+  report object; generation and delivery aren't mentioned either way. That's exactly the record
+  you'd want if gap #1 or #2 ever became a real incident, so it's worth confirming explicitly
+  rather than assuming it's covered.
 - **Empty results.** If a scope filter matches nothing, does the platform still generate and
   send an empty file, and does it say "0 results" clearly rather than just looking broken?
 - **Scheduling load.** Reports will probably cluster around common times, daily at 6am, Monday
   mornings, and nothing in the spec addresses whether the generation pipeline can absorb that.
+- **Saved-View scope: snapshot or live?** A report can use an existing saved View as its scope.
+  If that View's filters change after the report is created, does the report pick up the change
+  on its next generation, or does it keep whatever the View looked like at creation time? The
+  spec doesn't say. It's the same snapshot-vs-dynamic question as "sync board changes," just for
+  a different scope-selection path, and it deserves the same explicit answer.
+- **What does "download" actually do?** The spec says customers can "download any report
+  directly" from the Reports page. Does that regenerate fresh data on the spot, or serve the
+  last generated file? Those are two different guarantees for something meant to be current,
+  and the spec doesn't say which.
 
 ---
 
-## Part B — Test Plan
+## Part B: Test Plan
 
 Priority is about what blocks release: **Critical** = release-blocking if broken, **High** =
 should be fixed first but a narrow workaround might exist, **Medium** = tracked but not
@@ -120,7 +130,7 @@ made on an open question from Part A, rather than an already-specified behavior.
 them now so the test plan is ready the moment those calls get made, instead of starting from
 scratch later.
 
-### B.1 — Report creation (core flow)
+### B.1: Report creation (core flow)
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
@@ -129,11 +139,11 @@ scratch later.
 | TC-03 | Same, sync on | Editing the source dashboard (add/remove a widget) changes the next generation to match | High |
 | TC-04 | Create an Operational Data report for a module with specific columns picked and reordered | Generated CSV has exactly those columns, in that order | Critical |
 | TC-05 | Try to save/generate with required fields missing (no name, no report type) | Blocked with a clear inline message, nothing half-saved | High |
-| TC-06 | Use an existing saved View as the report's scope | Report data matches what that View shows live at generation time | Medium |
+| TC-06 | Use an existing saved View as scope, then edit the View's filters *(pending decision: saved-view sync semantics)* | Report reflects whichever sync behavior gets decided, snapshot at creation or live at each generation; not specified yet | Medium |
 | TC-07 | Create a report set to "Only for me" | No other user in the org can see or list it | Critical (security) |
 | TC-08 | Create a report set to "Organization level" | Other org users with report-viewing permission can see and download it | Critical |
 
-### B.2 — "Save as Custom Report" entry points
+### B.2: "Save as Custom Report" entry points
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
@@ -141,7 +151,7 @@ scratch later.
 | TC-10 | From a board view, "Save as custom report" | Pre-fills the board selection and current scope | High |
 | TC-11 | Spot-check the entry point on every module list/board view the spec says it should be on | Present and working everywhere it's supposed to be | Medium |
 
-### B.3 — On-demand generation & download
+### B.3: On-demand generation & download
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
@@ -150,17 +160,17 @@ scratch later.
 | TC-14 | Generate a report whose scope matches zero findings *(pending gap: empty results)* | File generated, "0 results" clearly communicated, not a blank/broken-looking export | High |
 | TC-15 | Generate an Operational Data report whose result set exceeds 500,000 rows *(pending gap #4)* | Visible truncation indicator present, no silent data loss | Critical (data integrity) |
 
-### B.4 — Reports page
+### B.4: Reports page
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
 | TC-16 | Search/filter by name, module, creation date, creator, individually and combined | Results match the filters correctly | Medium |
 | TC-17 | Check a report's schedule status | Reports with an active workflow show it; ones without show a "create schedule" shortcut | Medium |
-| TC-18 | Download a report directly from the Reports page | Produces a correct, current file | High |
+| TC-18 | Download a report directly from the Reports page *(pending decision: regenerate vs. serve last artifact)* | Behavior matches whichever gets decided; the spec only says "download any report directly," not which | High |
 | TC-19 | Edit a saved report's scope, then regenerate | Change is saved and reflected in the next generation | High |
 | TC-20 | Delete a report with an active schedule *(pending gap: delete-with-schedule behavior)* | Either blocked with a warning, or deletes both the report and its schedule with explicit confirmation | High (destructive-action safety) |
 
-### B.5 — Scheduled delivery (Workflows)
+### B.5: Scheduled delivery (Workflows)
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
@@ -168,17 +178,17 @@ scratch later.
 | TC-22 | Scheduled report under the destination's size limit | Delivered as a direct email attachment | High |
 | TC-23 | Scheduled report over the destination's size limit | A download link is sent instead; requires authentication before it works | Critical |
 | TC-24 | Configure a workflow recipient with an external, non-platform email address *(pending gap #2)* | Blocked by default, or allowed only behind an elevated permission with a distinct audit entry | Critical (security) |
-| TC-25 | Simulate a scheduled generation failure, e.g. a broken data source *(pending gap #5)* | Retry occurs and/or the report owner gets notified of the failure | Critical |
+| TC-25 | Simulate a scheduled generation failure, e.g. a broken data source *(pending gap #5)* | Not a testable pass/fail yet: depends entirely on the retry/notification policy decided for gap #5. Once defined (e.g. "retry twice, then mark the run Failed and notify the owner"), verify each of those steps exactly | Critical |
 | TC-26 | Disable a workflow | No further scheduled emails go out; Reports page reflects the disabled state | Medium |
 
-### B.6 — RBAC & audit
+### B.6: RBAC & audit
 
 | ID | Description | Expected result | Priority |
 |---|---|---|---|
 | TC-27 | A user without report-creation permission tries to create one, via UI and API | Blocked both ways, with a clear permission error | Critical (security) |
 | TC-28 | A user without access to a specific module creates/generates a report for it *(pending gap #1)* | Blocked, or scoped to only what they're permitted to see | Critical |
 | TC-29 | Create, edit, delete a report object | Each action produces a correctly-attributed audit entry (actor, timestamp, action, report ID) | High |
-| TC-30 | Check whether generation/delivery produce audit entries at all | Currently they don't; document as a known gap rather than pass/fail until it's addressed | Medium (documentation) |
+| TC-30 | Confirm whether generation/delivery events are captured in the audit log | Not specified in the PRD (only create/update/delete are listed); treat as an open gap until confirmed one way or the other, not a pass/fail check | Medium (documentation) |
 
 ### What I'd leave out of this round, and why
 
@@ -197,7 +207,7 @@ scratch later.
 
 ---
 
-## Part C — BI & Monitoring Definition
+## Part C: BI & Monitoring Definition
 
 ### Adoption / usage
 
@@ -205,7 +215,7 @@ scratch later.
 |---|---|---|---|
 | Reports created, by type & module | Volume of report objects created, split Summary(PDF)/Operational(CSV) and by module | Shows which type/module actually resonates and informs roadmap priority | Count of `report.created` events, grouped by type and module, per period |
 | % of orgs with ≥1 report | Breadth of adoption for a brand-new feature | The basic "is this landing" question | Distinct orgs with ≥1 report ÷ total active orgs |
-| On-demand vs. scheduled mix | Whether reports are one-off exports or recurring automated delivery | The whole value prop here is automation; a low scheduled share means the scheduling UX needs work, not that the export itself is unused | Reports with ≥1 enabled workflow ÷ total reports |
+| On-demand vs. scheduled mix | Share of actual report *generations* that come from a schedule vs. a manual click | The whole value prop here is automation; a low scheduled share means the scheduling UX needs work, not that the export itself is unused | Scheduled generation events ÷ all generation events, using the `trigger_type` field on the generation event log below. Counting report *objects* here would be misleading, since one scheduled report can generate hundreds of times a year while many on-demand reports generate once |
 | "Save as Custom Report" usage | How often reports start from an existing view vs. the standalone flow | Tests the spec's own bet that starting from a familiar view lowers the barrier to creating a report | Creation events tagged `source: save_as` ÷ all creation events |
 | Reports per active org (median / p90) | Depth of use, not just breadth | Tells "tried it once" orgs apart from power users, and power-user patterns often predict expansion conversations | Reports ÷ active orgs, median and p90 |
 
@@ -215,7 +225,7 @@ scratch later.
 |---|---|---|---|
 | Generation success rate | % of generation attempts (on-demand + scheduled) that complete without error | This is the core promise: push a button, get a report | Successful generations ÷ total attempts, daily |
 | Generation latency (p50 / p95) | Time from request to file ready | Slow generation kills trust in "generate now," and a rising trend catches scaling problems early | end_time minus start_time, by percentile and report type |
-| Delivery success rate | % of scheduled deliveries that reach the recipient | A generated-but-undelivered report is invisible to the customer, with the same trust cost as a failed generation | Successful sends ÷ total scheduled delivery attempts |
+| Delivery success rate | % of scheduled delivery attempts that go out successfully | A generated-but-undelivered report is invisible to the customer, with the same trust cost as a failed generation | Delivery attempts accepted by the sending provider ÷ total attempts. If bounce/delivery telemetry is available, tighten this to attempts confirmed delivered to the recipient's mailbox rather than just accepted for sending, since "accepted" and "arrived" aren't the same guarantee |
 | Large-file link-fallback rate | % of deliveries falling back to a link instead of an attachment | If this is high, the size threshold is probably wrong for real customer data: a product conversation, not just an ops one | Link-fallback deliveries ÷ total scheduled deliveries |
 | Truncation rate | % of Operational Data generations hitting the 500K-row cap | Same idea as above, for the CSV cap; also tells us whether the truncation warning from Part A is actually getting used | Generations flagged `truncated: true` ÷ total CSV generations |
 | Scheduled-run on-time rate | % of scheduled generations firing within an acceptable window of their configured time | This is the reliability promise behind "automated delivery, at the right time" | Runs starting within ~5 min of schedule ÷ total scheduled runs |
@@ -231,6 +241,10 @@ scratch later.
   catching a queue problem before it snowballs.
 - Generation latency p95 breaches an SLO (say, 2 minutes for CSVs, 5 for PDFs) for more than a
   few minutes straight.
+
+These are proposed starting thresholds, not numbers validated against real production traffic.
+I'd expect to tune all of them after launch based on actual baseline volume, customer
+expectations, and whatever SLOs get formally agreed.
 
 **Fine to check weekly, not paged:**
 - Adoption trends: reports created, % orgs onboarded, on-demand/scheduled split. Roadmap input,
@@ -249,7 +263,7 @@ scratch later.
   size, outcome, and, for link-based delivery, the actual download events after the fact. This
   feeds the reliability metrics above and is also the record that closes gaps #2 and #3:
   knowing who really accessed a report, not just who it was addressed to.
-- **Manual downloads from the Reports page.** Right now only generation looks tracked; without
-  download events, "reports per org" undercounts how much these are actually being used.
+- **Manual downloads from the Reports page.** Not specified in the PRD whether these are
+  tracked at all. If they aren't, "reports per org" would undercount actual usage.
 - **A simple "first report created" timestamp per org.** Small thing, but it turns the adoption
   metric into a lookup instead of something re-derived from raw events every time someone asks.
