@@ -268,12 +268,17 @@ hadn't caught:
 - **Only the executable-attachment signal can't be demoed with a real
   attachment.** Gmail blocks `.exe`/`.scr`/`.bat`-style extensions at send
   time, even inside a zip, so `dangerous-attachment`/`double-extension` are
-  proven only via unit tests here. That's a deliberate choice on Gmail's part,
-  though, not full coverage: Gmail's blocklist doesn't include macro-enabled
-  Office files (`.docm`/`.xlsm`), since they're common legitimate business
-  documents, and it can't inspect inside a password-protected archive. The
-  `macro-attachment` and `archive-attachment` checks exist specifically to
-  cover that gap, and both were demoed live (the `.zip` row above).
+  proven only via unit tests here. That's not full coverage on Gmail's part,
+  though: its blocklist doesn't include macro-enabled Office files
+  (`.docm`/`.xlsm`), since they're common legitimate business documents. The
+  `macro-attachment` and `archive-attachment` checks exist to cover exactly
+  that kind of gap, and both were demoed live (the `.zip` row above).
+- **Attachment checks are metadata-only, not content-inspecting**, by design
+  (see Security: only filename/type/size ever leaves the mailbox). Any
+  attachment whose actual contents are opaque to a scanner, an encrypted
+  archive being the obvious example, is a blind spot in principle. I haven't
+  tested that specific case in this project, so this is flagged as a general
+  limitation of a metadata-only approach, not a verified behavior.
 - **No persistence/history.** Nothing is stored beyond a single request (plus
   the short-lived findings cache); a real product would want a history of past
   analyses per user for trend/reporting purposes.
