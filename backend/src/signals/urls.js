@@ -19,7 +19,8 @@ export function urlSignals(email) {
   const links = extractLinks(email.bodyHtml);
   if (links.length === 0) return signals;
 
-  let mismatch = 0, ip = 0, shortener = 0, punycode = 0, credential = 0;
+  let ip = 0, shortener = 0, punycode = 0, credential = 0;
+  const mismatches = []; // { text, host } — kept so the finding can name names
 
   for (const link of links) {
     const host = hostOf(link.href);
@@ -30,7 +31,9 @@ export function urlSignals(email) {
     // "update.strava.com" pointing at "strava.com", or vice versa, is normal
     // and not flagged; only a genuinely different organization is).
     const textHost = hostOf(link.text.startsWith('http') ? link.text : 'http://' + link.text);
-    if (textHost && link.text.includes('.') && baseDomain(host) !== baseDomain(textHost)) mismatch++;
+    if (textHost && link.text.includes('.') && baseDomain(host) !== baseDomain(textHost)) {
+      mismatches.push({ text: link.text, host });
+    }
 
     if (isIpLiteralHost(host)) ip++;
     if (SHORTENERS.has(host)) shortener++;
@@ -38,12 +41,16 @@ export function urlSignals(email) {
     if (CREDENTIAL_KEYWORDS.test(link.href)) credential++;
   }
 
-  if (mismatch > 0) {
+  if (mismatches.length > 0) {
+    // Name the actual mismatched pair(s) — a verdict a user can't verify
+    // themselves isn't really "explainable".
+    const examples = mismatches.slice(0, 2).map((m) => `"${m.text}" -> ${m.host}`).join(', ');
+    const more = mismatches.length > 2 ? ` (+${mismatches.length - 2} more)` : '';
     signals.push({
       name: 'link-text-mismatch',
       severity: 'high',
-      detail: `${mismatch} link(s) display one address but point somewhere else.`,
-      points: Math.min(25, mismatch * 15)
+      detail: `${mismatches.length} link(s) display one address but point elsewhere: ${examples}${more}.`,
+      points: Math.min(25, mismatches.length * 15)
     });
   }
   if (ip > 0) {
