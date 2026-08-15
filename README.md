@@ -137,13 +137,17 @@ copy it from the service's **Environment** tab for step 2.
 Five independent signal modules each inspect the email and return zero or more
 `{ name, severity, detail, points }` findings:
 
-| Module | Looks at | Examples |
+| Module | Looks at | Signals & points |
 |---|---|---|
-| `auth` | `Authentication-Results` / `Received-SPF` headers | SPF/DKIM/DMARC fail or missing |
-| `sender` | Display name vs. from-domain, reply-to | Brand impersonation, reply-to redirected to a different organization, punycode sender domain |
-| `urls` | Links in the HTML body | Anchor text pointing to a different organization than the href, IP-literal links, shorteners, credential-related link paths |
-| `attachments` | Attachment filenames/types (metadata only) | Executables, disguised double extensions, macro-enabled Office files, archives |
-| `content` | Subject + body (plain **and** HTML-derived text) | Urgency language, credential requests, financial lures, threats |
+| `auth` | `Authentication-Results` / `Received-SPF` headers | DMARC fail (**25**) · SPF fail (**15**) · DKIM fail (**10**) · each "missing" variant at ~1/3 weight (**3–8**) · no auth headers present at all (**10**) |
+| `sender` | Display name vs. from-domain, reply-to | Brand impersonation (**20**) · punycode sender domain (**20**) · reply-to redirected to a different organization (**10**) |
+| `urls` | Links in the HTML body | Link text/href pointing at different organizations (up to **25**) · IP-literal link (up to **20**) · punycode URL (up to **20**) · credential-related link path (up to **12**) · shortener (up to **12**) |
+| `attachments` | Attachment filenames/types (metadata only) | Disguised double extension (**35**) · executable file (**30**) · macro-enabled Office file (**20**) · archive (**8**) |
+| `content` | Subject + body (plain **and** HTML-derived text) | Credential request (**12**) · threat (**10**) · financial lure (**10**) · urgency (**8**) |
+
+Points are summed and capped at 100. A few "up to" values scale with how many
+matching links were found (e.g. two IP-literal links score higher than one),
+capped per-signal so no single finding alone can dominate the score.
 
 All findings are summed and **capped at 100**; a lookup table maps the score to
 a band (Safe / Suspicious / Likely Malicious / Malicious). The score is fully
