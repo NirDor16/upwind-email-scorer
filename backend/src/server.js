@@ -24,8 +24,14 @@ app.use(express.json({ limit: '1mb' }));
 const SHARED_SECRET = process.env.SHARED_SECRET || '';
 
 function requireAuth(req, res, next) {
-  // If no secret is configured (pure local dev), allow through to keep testing simple.
-  if (!SHARED_SECRET) return next();
+  // Fail CLOSED, not open: if the secret isn't configured, refuse every request
+  // instead of silently letting them all through. A missing secret should be a
+  // loud misconfiguration (visible in Render logs / a failing request), never
+  // an accidentally open endpoint. Local dev just needs SHARED_SECRET in .env
+  // (see .env.example) — that's a one-line setup cost, not a real burden.
+  if (!SHARED_SECRET) {
+    return res.status(500).json({ error: 'server_misconfigured: SHARED_SECRET not set' });
+  }
 
   const header = req.get('authorization') || '';
   const provided = header.replace(/^Bearer\s+/i, '');
